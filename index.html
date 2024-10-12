@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhysportMeter</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="https://www.physport.ch/wp-content/uploads/2022/09/logo-blanc.svg" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            margin: 20px auto;
+            max-width: 600px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        label {
+            margin-top: 15px;
+            font-weight: bold;
+            display: block;
+        }
+        input[type="text"], input[type="date"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .chart-container {
+            position: relative;
+            margin: 20px 0;
+            height: 400px;
+            width: 100%;
+        }
+        .final-score {
+            font-weight: bold;
+            color: #333;
+            font-size: 18px;
+            margin-top: 15px;
+        }
+        .notes-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #eaeaea;
+            border-radius: 5px;
+        }
+        .score-value {
+            font-weight: bold;
+            color: #333;
+            display: block;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PhysportMeter</h1>
+        <label for="patientName">Nom du patient:</label>
+        <input type="text" id="patientName" required>
+        
+        <label for="date">Date:</label>
+        <input type="date" id="date" required>
+        
+        <h3>Évaluation</h3>
+        <label for="sessionAdherence">Observance des séances (0-10):</label>
+        <input type="range" id="sessionAdherence" min="0" max="10" value="5">
+        <span id="sessionAdherenceValue" class="score-value">5</span>
+
+        <label for="exerciseAdherence">Observance des exercices (0-10):</label>
+        <input type="range" id="exerciseAdherence" min="0" max="10" value="5">
+        <span id="exerciseAdherenceValue" class="score-value">5</span>
+
+        <label for="symptomEvolution">Évolution des symptômes (0-10):</label>
+        <input type="range" id="symptomEvolution" min="0" max="10" value="5">
+        <span id="symptomEvolutionValue" class="score-value">5</span>
+
+        <label for="functionalGoal">Avancement vers l'objectif fonctionnel (0-10):</label>
+        <input type="range" id="functionalGoal" min="0" max="10" value="5">
+        <span id="functionalGoalValue" class="score-value">5</span>
+
+        <label for="treatmentContinuation">Besoin de poursuivre le traitement (0-10):</label>
+        <input type="range" id="treatmentContinuation" min="0" max="10" value="5">
+        <span id="treatmentContinuationValue" class="score-value">5</span>
+
+        <button onclick="submitData()">Soumettre</button>
+
+        <div class="chart-container">
+            <canvas id="progressChart"></canvas>
+        </div>
+
+        <div class="final-score" id="finalScore"></div>
+
+        <div class="notes-container">
+            <label for="notes">Notes du physiothérapeute:</label>
+            <textarea id="notes" rows="4" placeholder="Entrez vos notes ici..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Afficher la valeur des curseurs
+        const sliders = [
+            'sessionAdherence',
+            'exerciseAdherence',
+            'symptomEvolution',
+            'functionalGoal',
+            'treatmentContinuation'
+        ];
+
+        sliders.forEach(slider => {
+            const element = document.getElementById(slider);
+            const valueDisplay = document.getElementById(`${slider}Value`);
+            element.addEventListener('input', function() {
+                valueDisplay.textContent = element.value;
+            });
+        });
+
+        let myChart;
+
+        function submitData() {
+            const patientName = document.getElementById('patientName').value;
+            const date = document.getElementById('date').value;
+
+            const scores = [
+                parseInt(document.getElementById('sessionAdherence').value),
+                parseInt(document.getElementById('exerciseAdherence').value),
+                parseInt(document.getElementById('symptomEvolution').value),
+                parseInt(document.getElementById('functionalGoal').value),
+                parseInt(document.getElementById('treatmentContinuation').value)
+            ];
+
+            drawChart(scores);
+            displayFinalScore(scores);
+        }
+
+        function drawChart(scores) {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (myChart) {
+                myChart.destroy();
+            }
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Observance des séances', 'Observance des exercices', 'Évolution des symptômes', 'Avancement vers l\'objectif', 'Besoin de poursuivre le traitement'],
+                    datasets: [{
+                        label: 'Scores',
+                        data: scores,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayFinalScore(scores) {
+            const finalScoreElement = document.getElementById('finalScore');
+            const totalScore = scores.reduce((a, b) => a + b, 0);
+            const finalPercentage = (totalScore / (scores.length * 10)) * 100; // Convertit en pourcentage
+            finalScoreElement.textContent = `Score final: ${finalPercentage.toFixed(2)}%`;
+        }
+    </script>
+</body>
+</html>
